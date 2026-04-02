@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Молодежный центр | Мероприятия</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <div class="logo">Молодежный центр</div>
+        <div class="nav-links">
+            <a href="index.html" class="active">Главная</a>
+            <a href="login.html" id="loginLink">Вход</a>
+            <a href="register.html" id="registerLink">Регистрация</a>
+            <a href="profile.html" id="profileLink" style="display: none;">Профиль</a>
+            <a href="admin.html" id="adminLink" style="display: none;">Админ панель</a>
+            <button id="logoutBtn" style="display: none;">Выход</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Мероприятия</h1>
+        <div class="filters">
+            <button data-filter="all" class="active">Все</button>
+            <button data-filter="upcoming">Предстоящие</button>
+            <button data-filter="past">Прошедшие</button>
+        </div>
+        <div id="events-list" class="events-grid">
+            <div class="loading">Загрузка...</div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        let currentFilter = 'all';
+        function render() {
+            loadEventsList('events-list', currentFilter);
+        }
+        document.querySelectorAll('.filters button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                render();
+            });
+        });
+        render();
+    </script>
+</body>
+</html>

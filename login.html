@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход | Молодежный центр</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <div class="logo">Молодежный центр</div>
+        <div class="nav-links">
+            <a href="index.html">Главная</a>
+            <a href="login.html" class="active">Вход</a>
+            <a href="register.html">Регистрация</a>
+        </div>
+    </nav>
+    <div class="container" style="max-width: 500px;">
+        <h2>Вход</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" required>
+            </div>
+            <div class="form-group">
+                <label>Пароль</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="btn">Войти</button>
+        </form>
+        <p style="margin-top: 1rem;">Нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
+    </div>
+    <script src="js/script.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const user = users.find(u => u.email === email && u.password === password);
+            if (user) {
+                setCurrentUser({ id: user.id, name: user.name, email: user.email, role: user.role });
+                showNotification('Вход выполнен успешно!', 'success');
+                window.location.href = 'index.html';
+            } else {
+                alert('Неверный email или пароль');
+            }
+        });
+    </script>
+</body>
+</html>

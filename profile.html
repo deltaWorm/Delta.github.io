@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль | Молодежный центр</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <div class="logo">Молодежный центр</div>
+        <div class="nav-links">
+            <a href="index.html">Главная</a>
+            <a href="login.html" id="loginLink">Вход</a>
+            <a href="register.html" id="registerLink">Регистрация</a>
+            <a href="profile.html" id="profileLink" style="display: none;">Профиль</a>
+            <a href="admin.html" id="adminLink" style="display: none;">Админ панель</a>
+            <button id="logoutBtn" style="display: none;">Выход</button>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>Мой профиль</h1>
+        <div id="profileInfo"></div>
+        
+        <h2>Редактировать профиль</h2>
+        <form id="editProfileForm">
+            <div class="form-group">
+                <label>Новое имя</label>
+                <input type="text" id="newName" required>
+            </div>
+            <button type="submit" class="btn">Обновить имя</button>
+        </form>
+
+        <h2>Мои заявки</h2>
+        <div id="applicationsList"></div>
+        
+        <h2>Мои отзывы</h2>
+        <div id="reviewsList"></div>
+    </div>
+    <script src="js/script.js"></script>
+    <script>
+        const user = getCurrentUser();
+        if (!user) {
+            window.location.href = 'login.html';
+        }
+        document.getElementById('profileInfo').innerHTML = `
+            <div class="event-card" style="padding:1rem;">
+                <p><strong>Имя:</strong> ${escapeHtml(user.name)}</p>
+                <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
+                <p><strong>Роль:</strong> ${user.role === 'admin' ? 'Администратор' : 'Участник'}</p>
+            </div>
+        `;
+        document.getElementById('newName').value = user.name;
+
+        document.getElementById('editProfileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newName = document.getElementById('newName').value.trim();
+            if (!newName) return;
+            if (updateUserName(newName)) {
+                showNotification('Имя обновлено!', 'success');
+                // обновляем отображение
+                const updatedUser = getCurrentUser();
+                document.getElementById('profileInfo').innerHTML = `
+                    <div class="event-card" style="padding:1rem;">
+                        <p><strong>Имя:</strong> ${escapeHtml(updatedUser.name)}</p>
+                        <p><strong>Email:</strong> ${escapeHtml(updatedUser.email)}</p>
+                        <p><strong>Роль:</strong> ${updatedUser.role === 'admin' ? 'Администратор' : 'Участник'}</p>
+                    </div>
+                `;
+                // обновляем навигацию (имя в кабинете)
+                updateNav();
+            } else {
+                alert('Ошибка обновления');
+            }
+        });
+
+        // Заявки
+        const apps = JSON.parse(localStorage.getItem('applications') || '[]');
+        const events = JSON.parse(localStorage.getItem('events') || '[]');
+        const myApps = apps.filter(a => a.userId === user.id || a.guestEmail === user.email);
+        const appsDiv = document.getElementById('applicationsList');
+        if (myApps.length === 0) {
+            appsDiv.innerHTML = '<p>Вы ещё не подавали заявок.</p>';
+        } else {
+            appsDiv.innerHTML = myApps.map(app => {
+                const ev = events.find(e => e.id === app.eventId);
+                return `
+                    <div class="event-card" style="margin-bottom:1rem;">
+                        <div class="event-info">
+                            <div class="event-title">${ev ? escapeHtml(ev.title) : 'Мероприятие'}</div>
+                            <div>Статус: ${app.status === 'pending' ? 'Ожидает' : (app.status === 'approved' ? 'Подтверждена' : 'Отклонена')}</div>
+                            <div>Дата заявки: ${app.createdAt}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Отзывы
+        const reviews = JSON.parse(localStorage.getItem('reviews') || '[]');
+        const myReviews = reviews.filter(r => r.userId === user.id);
+        const revDiv = document.getElementById('reviewsList');
+        if (myReviews.length === 0) {
+            revDiv.innerHTML = '<p>Вы ещё не оставляли отзывов.</p>';
+        } else {
+            revDiv.innerHTML = myReviews.map(r => {
+                const ev = events.find(e => e.id === r.eventId);
+                return `
+                    <div class="review-item">
+                        <div class="event-title">${ev ? escapeHtml(ev.title) : 'Мероприятие'}</div>
+                        <div class="review-rating">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                        <div>${escapeHtml(r.text)}</div>
+                        ${r.photo ? `<img class="review-photo" src="${r.photo}">` : ''}
+                        <div style="font-size:0.8rem;">${r.date}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
