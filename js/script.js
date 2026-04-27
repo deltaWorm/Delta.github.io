@@ -4,74 +4,80 @@
 const BIN_ID = "69ef4067856a68218979b08a";          // замените на ваш Bin ID
 const API_KEY = "$2a$10$Dc.opl3vipqmBcnBHEpjuONNcea7nVvxpfc8nr9wvCh62kyQHU/n6";        // замените на ваш API Key
 const BASE_URL = `https://api.jsonbin.io/v3/b/69ef4067856a68218979b08a`;
+// Глобальный кэш данных
+let appData = null;
+let currentUser = null;
 
-// Функция загрузки всех данных из JSONBin
+// Загрузка данных из JSONBin
 async function loadData() {
-    const response = await fetch(BASE_URL, {
-        headers: { 'X-Master-Key': API_KEY }
-    });
-    const data = await response.json();
-    return data.record; // объект с users, events, reviews, applications
-}
-
-// Функция сохранения всех данных в JSONBin
-async function saveData(data) {
-    await fetch(BASE_URL, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': API_KEY
-        },
-        body: JSON.stringify(data)
-    });
-}
-
-// Глобальные переменные для кэша (чтобы не грузить постоянно)
-let cachedData = null;
-
-// Обновить кэш и сохранить
-async function updateCacheAndSave(newData) {
-    cachedData = newData;
-    await saveData(cachedData);
-}
-
-// Получить актуальные данные (с кэшем)
-async function getData() {
-    if (!cachedData) {
-        cachedData = await loadData();
-    }
-    return cachedData;
-}
-
-// Инициализация (если данных нет, создаём структуру)
-async function initStorage() {
     try {
-        const data = await loadData();
-        if (!data.users) {
-            // Первый запуск – инициализируем
-            const defaultData = {
-                users: [
-                    { id: 1, name: "Администратор", email: "admin@youth.ru", password: "admin", role: "admin" }
-                ],
-                events: [],
-                reviews: [],
-                applications: []
-            };
-            await saveData(defaultData);
-            cachedData = defaultData;
-        } else {
-            cachedData = data;
-        }
+        const response = await fetch(BASE_URL, {
+            headers: { 'X-Master-Key': API_KEY }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        return json.record;
     } catch (error) {
-        console.error("Ошибка инициализации:", error);
+        console.error("Ошибка загрузки данных:", error);
+        return null;
     }
 }
 
-// ========== ПОЛЬЗОВАТЕЛИ ==========
-async function getUsers() { const data = await getData(); return data.users; }
-async function saveUsers(users) { const data = await getData(); data.users = users; await updateCacheAndSave(data); }
+// Сохранение данных в JSONBin
+async function saveData(data) {
+    try {
+        await fetch(BASE_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': API_KEY
+            },
+            body: JSON.stringify(data)
+        });
+    } catch (error) {
+        console.error("Ошибка сохранения:", error);
+        throw error;
+    }
+}
+
+// Инициализация: загружаем данные, если их нет – создаём структуру
+async function initStorage() {
+    let data = await loadData();
+    if (!data || !data.users) {
+        // Первый запуск – создаём стартовую структуру
+        const defaultData = {
+            users: [
+                { id: 1, name: "Администратор", email: "admin@youth.ru", password: "admin", role: "admin" }
+            ],
+            events: [],
+            reviews: [],
+            applications: []
+        };
+        await saveData(defaultData);
+        appData = defaultData;
+    } else {
+        appData = data;
+    }
+    return appData;
+}
+
+// Получить актуальные данные (с обновлением кэша)
+async function refreshData() {
+    appData = await loadData();
+    return appData;
+}
+
+// Обновить весь объект данных в хранилище
+async function updateData(newData) {
+    appData = newData;
+    await saveData(appData);
+}
+
+// ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ==========
+async function getUsers() { return appData.users; }
+async function saveUsers(users) { appData.users = users; await updateData(appData); }
 async function addUser(user) {
-    const users = await getUsers();
+    const users = appData.users;
     const newId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
     const newUser = { ...user, id: newId };
     users.push(newUser);
@@ -79,7 +85,7 @@ async function addUser(user) {
     return newUser;
 }
 async function updateUser(userId, updates) {
-    const users = await getUsers();
+    const users = appData.users;
     const index = users.findIndex(u => u.id === userId);
     if (index !== -1) {
         users[index] = { ...users[index], ...updates };
@@ -89,19 +95,17 @@ async function updateUser(userId, updates) {
     return false;
 }
 async function getUserById(id) {
-    const users = await getUsers();
-    return users.find(u => u.id === id);
+    return appData.users.find(u => u.id === id);
 }
 async function getUserByEmail(email) {
-    const users = await getUsers();
-    return users.find(u => u.email === email);
+    return appData.users.find(u => u.email === email);
 }
 
 // ========== МЕРОПРИЯТИЯ ==========
-async function getEvents() { const data = await getData(); return data.events; }
-async function saveEvents(events) { const data = await getData(); data.events = events; await updateCacheAndSave(data); }
+async function getEvents() { return appData.events; }
+async function saveEvents(events) { appData.events = events; await updateData(appData); }
 async function addEvent(event) {
-    const events = await getEvents();
+    const events = appData.events;
     const newId = events.length ? Math.max(...events.map(e => e.id)) + 1 : 1;
     const newEvent = { ...event, id: newId, createdAt: new Date().toISOString().split('T')[0] };
     events.push(newEvent);
@@ -109,7 +113,7 @@ async function addEvent(event) {
     return newEvent;
 }
 async function updateEvent(eventId, updatedData) {
-    const events = await getEvents();
+    const events = appData.events;
     const index = events.findIndex(e => e.id === eventId);
     if (index !== -1) {
         events[index] = { ...events[index], ...updatedData };
@@ -119,31 +123,30 @@ async function updateEvent(eventId, updatedData) {
     return false;
 }
 async function deleteEvent(eventId) {
-    let events = await getEvents();
+    let events = appData.events;
     events = events.filter(e => e.id !== eventId);
     await saveEvents(events);
-    // также удаляем связанные отзывы и заявки
-    let reviews = await getReviews();
+    // удалить связанные отзывы и заявки
+    let reviews = appData.reviews;
     reviews = reviews.filter(r => r.eventId !== eventId);
-    await saveReviews(reviews);
-    let apps = await getApplications();
-    apps = apps.filter(a => a.eventId !== eventId);
-    await saveApplications(apps);
+    appData.reviews = reviews;
+    let applications = appData.applications;
+    applications = applications.filter(a => a.eventId !== eventId);
+    appData.applications = applications;
+    await updateData(appData);
 }
 async function getEventById(id) {
-    const events = await getEvents();
-    return events.find(e => e.id === id);
+    return appData.events.find(e => e.id === id);
 }
 async function getEventsWithDetails() {
-    const events = await getEvents();
-    return events.sort((a,b) => a.date.localeCompare(b.date));
+    return [...appData.events].sort((a,b) => a.date.localeCompare(b.date));
 }
 
 // ========== ОТЗЫВЫ ==========
-async function getReviews() { const data = await getData(); return data.reviews; }
-async function saveReviews(reviews) { const data = await getData(); data.reviews = reviews; await updateCacheAndSave(data); }
+async function getReviews() { return appData.reviews; }
+async function saveReviews(reviews) { appData.reviews = reviews; await updateData(appData); }
 async function addReview(review) {
-    const reviews = await getReviews();
+    const reviews = appData.reviews;
     const newId = reviews.length ? Math.max(...reviews.map(r => r.id)) + 1 : 1;
     const newReview = { ...review, id: newId, replies: [] };
     reviews.push(newReview);
@@ -151,16 +154,15 @@ async function addReview(review) {
     return newReview;
 }
 async function getReviewsForEvent(eventId) {
-    const reviews = await getReviews();
-    const users = await getUsers();
-    const eventReviews = reviews.filter(r => r.eventId === eventId);
-    return eventReviews.map(r => {
+    const reviews = appData.reviews.filter(r => r.eventId === eventId);
+    const users = appData.users;
+    return reviews.map(r => {
         const author = users.find(u => u.id === r.userId);
         return { ...r, userName: author ? author.name : 'Гость' };
     }).sort((a,b) => new Date(b.date) - new Date(a.date));
 }
 async function deleteReview(reviewId, currentUserId, currentUserRole) {
-    let reviews = await getReviews();
+    let reviews = appData.reviews;
     const review = reviews.find(r => r.id === reviewId);
     if (!review) return false;
     if (review.userId === currentUserId || currentUserRole === 'admin') {
@@ -171,7 +173,7 @@ async function deleteReview(reviewId, currentUserId, currentUserRole) {
     return false;
 }
 async function addReplyToReview(reviewId, replyText, authorId, authorName) {
-    let reviews = await getReviews();
+    let reviews = appData.reviews;
     const review = reviews.find(r => r.id === reviewId);
     if (!review) return false;
     if (!review.replies) review.replies = [];
@@ -186,10 +188,10 @@ async function addReplyToReview(reviewId, replyText, authorId, authorName) {
 }
 
 // ========== ЗАЯВКИ ==========
-async function getApplications() { const data = await getData(); return data.applications; }
-async function saveApplications(apps) { const data = await getData(); data.applications = apps; await updateCacheAndSave(data); }
+async function getApplications() { return appData.applications; }
+async function saveApplications(apps) { appData.applications = apps; await updateData(appData); }
 async function addApplication(application) {
-    const apps = await getApplications();
+    const apps = appData.applications;
     const newId = apps.length ? Math.max(...apps.map(a => a.id)) + 1 : 1;
     const newApp = { ...application, id: newId, createdAt: new Date().toISOString().split('T')[0], status: 'pending' };
     apps.push(newApp);
@@ -197,7 +199,7 @@ async function addApplication(application) {
     return newApp;
 }
 async function updateApplicationStatus(appId, status) {
-    let apps = await getApplications();
+    const apps = appData.applications;
     const app = apps.find(a => a.id === appId);
     if (app) {
         app.status = status;
@@ -207,12 +209,27 @@ async function updateApplicationStatus(appId, status) {
     return false;
 }
 async function getUserApplications(userId, userEmail) {
-    const apps = await getApplications();
-    return apps.filter(a => a.userId === userId || a.guestEmail === userEmail);
+    return appData.applications.filter(a => a.userId === userId || a.guestEmail === userEmail);
 }
 
-// ========== ПОЛЬЗОВАТЕЛЬСКАЯ СЕССИЯ ==========
-let currentUser = null;
+// ========== УПРАВЛЕНИЕ СЕССИЕЙ ==========
+async function restoreSession() {
+    const stored = localStorage.getItem('currentUser');
+    if (stored) {
+        const user = JSON.parse(stored);
+        // Проверим, существует ли такой пользователь в актуальных данных
+        await refreshData(); // обновим из облака
+        const valid = appData.users.find(u => u.id === user.id);
+        if (valid) {
+            currentUser = valid;
+        } else {
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+        }
+    } else {
+        currentUser = null;
+    }
+}
 function getCurrentUser() { return currentUser; }
 async function setCurrentUser(user) {
     currentUser = user;
@@ -220,17 +237,11 @@ async function setCurrentUser(user) {
         localStorage.setItem('currentUser', JSON.stringify(user));
     } else {
         localStorage.removeItem('currentUser');
-        currentUser = null;
     }
 }
-async function restoreSession() {
-    const stored = localStorage.getItem('currentUser');
-    if (stored) {
-        currentUser = JSON.parse(stored);
-        const users = await getUsers();
-        const valid = users.find(u => u.id === currentUser.id);
-        if (!valid) currentUser = null;
-    }
+async function logout() {
+    await setCurrentUser(null);
+    window.location.href = 'index.html';
 }
 
 // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
@@ -251,6 +262,8 @@ function showNotification(message, type = 'success') {
     document.body.appendChild(notif);
     setTimeout(() => notif.remove(), 3000);
 }
+
+// Обновление навигации (показывает ссылки в зависимости от авторизации)
 async function updateNav() {
     const user = getCurrentUser();
     const loginLink = document.getElementById('loginLink');
@@ -258,13 +271,24 @@ async function updateNav() {
     const profileLink = document.getElementById('profileLink');
     const adminLink = document.getElementById('adminLink');
     const logoutBtn = document.getElementById('logoutBtn');
-    if (loginLink) loginLink.style.display = user ? 'none' : 'inline';
-    if (registerLink) registerLink.style.display = user ? 'none' : 'inline';
-    if (profileLink) profileLink.style.display = user ? 'inline' : 'none';
-    if (logoutBtn) logoutBtn.style.display = user ? 'inline' : 'none';
-    if (adminLink && user && user.role === 'admin') adminLink.style.display = 'inline';
-    else if (adminLink) adminLink.style.display = 'none';
+
+    if (user) {
+        if (loginLink) loginLink.style.display = 'none';
+        if (registerLink) registerLink.style.display = 'none';
+        if (profileLink) profileLink.style.display = 'inline';
+        if (logoutBtn) logoutBtn.style.display = 'inline';
+        if (adminLink && user.role === 'admin') adminLink.style.display = 'inline';
+        else if (adminLink) adminLink.style.display = 'none';
+    } else {
+        if (loginLink) loginLink.style.display = 'inline';
+        if (registerLink) registerLink.style.display = 'inline';
+        if (profileLink) profileLink.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        if (adminLink) adminLink.style.display = 'none';
+    }
 }
+
+// Загрузка списка мероприятий на главную (используется в index.html)
 async function loadEventsList(containerId, filter = 'all') {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -277,7 +301,7 @@ async function loadEventsList(containerId, filter = 'all') {
     }
     events.sort((a,b) => a.date.localeCompare(b.date));
     if (events.length === 0) {
-        container.innerHTML = '<div style="padding:40px; text-align:center;">Нет мероприятий. Добавьте их через админ-панель.</div>';
+        container.innerHTML = '<div style="text-align:center; padding:40px;">Нет мероприятий. Добавьте их через админ-панель.</div>';
         return;
     }
     container.innerHTML = events.map(event => `
@@ -293,16 +317,12 @@ async function loadEventsList(containerId, filter = 'all') {
         </div>
     `).join('');
 }
-async function logout() {
-    await setCurrentUser(null);
-    window.location.href = 'index.html';
-}
 
-// Инициализация
+// Инициализация при загрузке любой страницы
 document.addEventListener('DOMContentLoaded', async () => {
-    await initStorage();
-    await restoreSession();
-    await updateNav();
+    await initStorage();   // загружаем данные из облака
+    await restoreSession(); // восстанавливаем сессию
+    await updateNav();      // обновляем меню
     const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) logoutBtn.addEventListener('click', logout);
+    if (logoutBtn) logoutBtn.addEventListener('click', () => logout());
 });
