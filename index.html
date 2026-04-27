@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Молодежный центр | Мероприятия</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <nav>
@@ -31,6 +32,21 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        let currentFilter = 'all';
+        function render() {
+            loadEventsList('events-list', currentFilter);
+        }
+        document.querySelectorAll('.filters button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                render();
+            });
+        });
+        render();
+    </script>
 </body>
 </html>
