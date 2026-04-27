@@ -90,7 +90,7 @@
                     <div class="event-info">
                         <h1 style="font-size:1.5rem;">${escapeHtml(currentEvent.title)}</h1>
                         <div>📅 ${currentEvent.date}</div>
-                        <div>🕒 ${currentEvent.time}</div>
+                        <div class="event-time">🕒 ${currentEvent.start_time} – ${currentEvent.end_time}</div>
                         <div>📍 ${currentEvent.location}</div>
                         <p>${escapeHtml(currentEvent.description)}</p>
                     </div>
