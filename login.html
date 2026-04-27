@@ -4,62 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход | Молодежный центр</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- Навигация (копия с главной) -->
     <nav>
         <div class="logo">Молодежный центр</div>
         <div class="nav-links">
             <a href="index.html">Главная</a>
             <a href="login.html" class="active">Вход</a>
             <a href="register.html">Регистрация</a>
+            <a href="profile.html" id="profileLink" style="display: none;">Профиль</a>
+            <a href="admin.html" id="adminLink" style="display: none;">Админ панель</a>
+            <button id="logoutBtn" style="display: none;">Выход</button>
         </div>
     </nav>
 
-    <div class="container" style="max-width: 500px;">
-        <h2>Вход</h2>
+    <div class="container" style="max-width: 500px; margin-top: 2rem;">
+        <h2>Вход в личный кабинет</h2>
         <form id="loginForm">
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" required>
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="example@mail.ru">
             </div>
             <div class="form-group">
-                <label>Пароль</label>
-                <input type="password" name="password" required>
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required placeholder="••••••">
             </div>
             <button type="submit" class="btn">Войти</button>
         </form>
-        <p>Нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
+        <p style="margin-top: 1rem; text-align: center;">
+            Нет аккаунта? <a href="register.html">Зарегистрироваться</a>
+        </p>
     </div>
 
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        // Обработчик формы входа
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = {
-                email: formData.get('email'),
-                password: formData.get('password')
-            };
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (res.ok) {
-                    const result = await res.json();
-                    setToken(result.token);
-                    setUser(result.user);
-                    window.location.href = 'index.html';
-                } else {
-                    const err = await res.json();
-                    alert(err.error || 'Ошибка входа');
-                }
-            } catch (error) {
-                alert('Ошибка подключения к серверу');
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            const users = getUsers(); // функция из script.js
+            const user = users.find(u => u.email === email && u.password === password);
+
+            if (user) {
+                setCurrentUser({ id: user.id, name: user.name, email: user.email, role: user.role });
+                showNotification('Вход выполнен успешно!', 'success');
+                window.location.href = 'index.html';
+            } else {
+                showNotification('Неверный email или пароль', 'error');
             }
         });
+
+        // Обновляем навигацию (чтобы скрыть ссылки входа/регистрации после входа – на всякий случай)
+        updateNav();
     </script>
 </body>
 </html>
