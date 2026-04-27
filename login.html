@@ -33,20 +33,18 @@
     </div>
     <script src="js/script.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const user = users.find(u => u.email === email && u.password === password);
-            if (user) {
-                setCurrentUser({ id: user.id, name: user.name, email: user.email, role: user.role });
-                showNotification('Вход выполнен успешно!', 'success');
-                window.location.href = 'index.html';
-            } else {
-                alert('Неверный email или пароль');
-            }
-        });
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const users = await getUsers();
+    const user = users.find(u => u.email === email && u.password === password);
+    if (user) {
+        await setCurrentUser({ id: user.id, name: user.name, email: user.email, role: user.role });
+        showNotification('Вход выполнен', 'success');
+        window.location.href = 'index.html';
+    } else alert('Неверный email или пароль');
+});
     </script>
 </body>
 </html>
