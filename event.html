@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мероприятие | Молодежный центр</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <nav>
@@ -21,161 +20,163 @@
     </nav>
 
     <div class="container">
-        <a href="index.html" class="btn" style="display: inline-block; margin-bottom: 1rem;">← Назад к списку</a>
+        <div id="event-detail"></div>
 
-        <div class="event-layout">
-            <div class="event-left">
-                <div id="event-detail"></div>
-                <div id="application-form-container" style="margin-top: 2rem;">
-                    <h3>Записаться на мероприятие</h3>
-                    <form id="applicationForm">
-                        <div id="appFields"></div>
-                        <button type="submit" class="btn">Записаться</button>
-                    </form>
+        <h2>Отзывы участников</h2>
+        <div id="reviews-list"></div>
+
+        <div id="review-form-container" style="display: none;">
+            <h3>Оставить отзыв</h3>
+            <form id="reviewForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Ваш отзыв</label>
+                    <textarea name="text" required></textarea>
                 </div>
-            </div>
-            <div class="event-right">
-                <h2>Отзывы участников</h2>
-                <div id="reviews-list"></div>
-                <div id="review-form-container" style="display: none; margin-top: 2rem;">
-                    <h3>Оставить отзыв</h3>
-                    <form id="reviewForm">
-                        <div class="form-group"><label>Оценка</label><select id="rating" required><option value="5">5 ★</option><option value="4">4 ★</option><option value="3">3 ★</option><option value="2">2 ★</option><option value="1">1 ★</option></select></div>
-                        <div class="form-group"><label>Текст отзыва</label><textarea id="reviewText" rows="3" required></textarea></div>
-                        <div class="form-group"><label>Фото</label><input type="file" id="reviewPhoto" accept="image/*"></div>
-                        <button type="submit" class="btn">Отправить отзыв</button>
-                    </form>
+                <div class="form-group">
+                    <label>Фото (необязательно)</label>
+                    <input type="file" name="photo" accept="image/*">
                 </div>
-            </div>
+                <button type="submit" class="btn">Отправить отзыв</button>
+            </form>
+        </div>
+
+        <div id="application-form-container">
+            <h3>Записаться на мероприятие</h3>
+            <form id="applicationForm">
+                <div id="applicationFields"></div>
+                <button type="submit" class="btn">Записаться</button>
+            </form>
         </div>
     </div>
 
-    <script src="js/script.js"></script>
+    <script src="script.js"></script>
     <script>
+        // Получаем ID мероприятия из URL
         const urlParams = new URLSearchParams(window.location.search);
-        const eventId = parseInt(urlParams.get('id'));
-        let currentEvent = null;
+        const eventId = urlParams.get('id');
 
-        function loadEvent() {
-            currentEvent = getEventById(eventId);
-            if (!currentEvent) {
-                document.getElementById('event-detail').innerHTML = '<div class="error">Мероприятие не найдено</div>';
-                return;
-            }
+        async function loadEvent() {
+            if (!eventId) return;
+            const res = await fetch(`/api/events/${eventId}`);
+            const data = await res.json();
+            const event = data.event;
+            const reviews = data.reviews;
+
+            // Отображаем мероприятие
             document.getElementById('event-detail').innerHTML = `
-                <div class="event-card" style="margin-bottom:2rem;">
-                    ${currentEvent.image ? `<img class="event-image" src="${currentEvent.image}" style="height:200px; object-fit:cover;">` : '<div class="event-image" style="background:#d9eef5; height:200px;"></div>'}
+                <div class="event-card" style="margin-bottom: 2rem;">
+                    ${event.image_url ? `<img class="event-image" src="${event.image_url}" style="height:300px;">` : ''}
                     <div class="event-info">
-                        <h1 style="font-size:1.5rem;">${escapeHtml(currentEvent.title)}</h1>
-                        <div>📅 ${currentEvent.date}</div>
-                        <div>🕒 ${currentEvent.start_time} – ${currentEvent.end_time}</div>
-                        <div>📍 ${currentEvent.location}</div>
-                        <p>${escapeHtml(currentEvent.description)}</p>
+                        <h1>${event.title}</h1>
+                        <div>📅 ${event.date}</div>
+                        <div>🕒 ${event.time}</div>
+                        <div>📍 ${event.location}</div>
+                        <p>${event.description}</p>
                     </div>
                 </div>
             `;
 
-            const reviews = getReviewsForEvent(eventId);
-            const users = getUsers();
+            // Отображаем отзывы
             const reviewsDiv = document.getElementById('reviews-list');
             if (reviews.length === 0) {
                 reviewsDiv.innerHTML = '<p>Пока нет отзывов. Будьте первым!</p>';
             } else {
-                reviewsDiv.innerHTML = reviews.map(r => {
-                    const author = users.find(u => u.id === r.userId);
-                    const replies = r.replies || [];
-                    return `
-                        <div class="review-item" data-review-id="${r.id}">
-                            <div class="review-author">${escapeHtml(author ? author.name : 'Гость')}</div>
-                            <div class="review-rating">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
-                            <div class="review-text">${escapeHtml(r.text)}</div>
-                            ${r.photo ? `<img class="review-photo" src="${r.photo}">` : ''}
-                            <div style="font-size:0.8rem;">${r.date}</div>
-                            <div class="replies-list">
-                                ${replies.map(rep => `<div class="reply-item"><span class="reply-author">${escapeHtml(rep.authorName)}</span>: ${escapeHtml(rep.text)}<div style="font-size:0.7rem;">${rep.date}</div></div>`).join('')}
-                            </div>
-                            ${getCurrentUser() ? `<div class="reply-form"><textarea class="reply-text" rows="2" placeholder="Ответить..."></textarea><button class="btn-outline reply-submit">Ответить</button></div>` : ''}
+                reviewsDiv.innerHTML = reviews.map(review => `
+                    <div class="event-card" style="margin-bottom:1rem;">
+                        <div class="event-info">
+                            <div><strong>${review.user_name || 'Гость'}</strong> - ${new Date(review.created_at).toLocaleDateString()}</div>
+                            <p>${review.text}</p>
+                            ${review.photo_url ? `<img src="${review.photo_url}" style="max-width:100%; max-height:200px; margin-top:10px;">` : ''}
+                            ${getUser() && (getUser().role === 'admin' || getUser().id === review.user_id) ? `<button class="btn btn-outline" onclick="deleteReview(${review.id})">Удалить</button>` : ''}
                         </div>
-                    `;
-                }).join('');
+                    </div>
+                `).join('');
             }
 
-            const user = getCurrentUser();
-            if (user && user.role === 'user') {
+            // Показываем форму отзыва только для авторизованных участников (не админ? можно и админу, но обычно участник)
+            const user = getUser();
+            if (user && user.role === 'participant') {
                 document.getElementById('review-form-container').style.display = 'block';
             } else {
                 document.getElementById('review-form-container').style.display = 'none';
             }
 
-            const appFields = document.getElementById('appFields');
+            // Форма заявки
+            const appFields = document.getElementById('applicationFields');
             if (user) {
-                appFields.innerHTML = `<p>Вы авторизованы как ${escapeHtml(user.name)}. Нажмите кнопку для записи.</p>`;
+                appFields.innerHTML = `<p>Вы авторизованы как ${user.name}. Нажмите кнопку, чтобы записаться.</p>`;
             } else {
-                appFields.innerHTML = `<div class="form-group"><label>Ваше имя</label><input type="text" id="guestName" required></div><div class="form-group"><label>Email</label><input type="email" id="guestEmail" required></div>`;
+                appFields.innerHTML = `
+                    <div class="form-group">
+                        <label>Ваше имя</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ваш email</label>
+                        <input type="email" name="email" required>
+                    </div>
+                `;
             }
-
-            document.querySelectorAll('.review-item').forEach(item => {
-                const reviewId = parseInt(item.dataset.reviewId);
-                const submitBtn = item.querySelector('.reply-submit');
-                const textarea = item.querySelector('.reply-text');
-                if (submitBtn) {
-                    submitBtn.addEventListener('click', () => {
-                        const replyText = textarea.value.trim();
-                        if (!replyText) return;
-                        if (addReplyToReview(reviewId, replyText, user.id, user.name)) {
-                            showNotification('Ответ добавлен', 'success');
-                            loadEvent();
-                        } else alert('Ошибка');
-                    });
-                }
-            });
         }
 
-        document.getElementById('reviewForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const user = getCurrentUser();
-            if (!user || user.role !== 'user') {
-                alert('Только зарегистрированные участники могут оставлять отзывы');
-                return;
-            }
-            const text = document.getElementById('reviewText').value.trim();
-            const rating = parseInt(document.getElementById('rating').value);
-            if (!text) { alert('Введите текст отзыва'); return; }
-            const photoFile = document.getElementById('reviewPhoto').files[0];
-            const addReviewCallback = (photoBase64) => {
-                addReview({ eventId, userId: user.id, text, rating, photo: photoBase64, date: new Date().toISOString().split('T')[0] });
-                showNotification('Отзыв добавлен!', 'success');
-                document.getElementById('reviewForm').reset();
+        window.deleteReview = async (reviewId) => {
+            if (!confirm('Удалить отзыв?')) return;
+            const token = getToken();
+            const res = await fetch(`/api/reviews/${reviewId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
                 loadEvent();
-            };
-            if (photoFile) {
-                const reader = new FileReader();
-                reader.onload = (ev) => addReviewCallback(ev.target.result);
-                reader.readAsDataURL(photoFile);
-            } else addReviewCallback(null);
+            } else {
+                alert('Ошибка удаления');
+            }
+        };
+
+        // Отправка отзыва
+        document.getElementById('reviewForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const token = getToken();
+            const res = await fetch(`/api/events/${eventId}/reviews`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (res.ok) {
+                alert('Отзыв добавлен');
+                e.target.reset();
+                loadEvent();
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Ошибка');
+            }
         });
 
-        document.getElementById('applicationForm')?.addEventListener('submit', (e) => {
+        // Отправка заявки
+        document.getElementById('applicationForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const user = getCurrentUser();
-            let guestName, guestEmail;
-            if (user) {
-                guestName = user.name;
-                guestEmail = user.email;
+            const formData = new FormData(e.target);
+            const data = {};
+            formData.forEach((val, key) => data[key] = val);
+            const token = getToken();
+            const headers = token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+            const res = await fetch(`/api/events/${eventId}/applications`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                alert('Заявка отправлена!');
+                e.target.reset();
             } else {
-                guestName = document.getElementById('guestName').value.trim();
-                guestEmail = document.getElementById('guestEmail').value.trim();
-                if (!guestName || !guestEmail) { alert('Заполните имя и email'); return; }
-            }
-            addApplication({ eventId, userId: user ? user.id : null, guestName, guestEmail });
-            showNotification('Заявка отправлена! Ожидайте подтверждения.', 'success');
-            document.getElementById('applicationForm').reset();
-            if (!user) {
-                document.getElementById('appFields').innerHTML = `<div class="form-group"><label>Ваше имя</label><input type="text" id="guestName" required></div><div class="form-group"><label>Email</label><input type="email" id="guestEmail" required></div>`;
+                const err = await res.json();
+                alert(err.error || 'Ошибка');
             }
         });
 
         loadEvent();
+        updateNav();
     </script>
 </body>
 </html>
