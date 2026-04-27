@@ -3,90 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Профиль | Молодежный центр</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Мой профиль | Молодежный центр</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <nav>
         <div class="logo">Молодежный центр</div>
         <div class="nav-links">
             <a href="index.html">Главная</a>
-            <a href="profile.html" class="active">Профиль</a>
+            <a href="login.html" id="loginLink">Вход</a>
+            <a href="register.html" id="registerLink">Регистрация</a>
+            <a href="profile.html" id="profileLink" style="display: none;">Профиль</a>
             <a href="admin.html" id="adminLink" style="display: none;">Админ панель</a>
-            <button id="logoutBtn">Выход</button>
+            <button id="logoutBtn" style="display: none;">Выход</button>
         </div>
     </nav>
 
     <div class="container">
         <h1>Мой профиль</h1>
-        <div id="profileInfo"></div>
-        <h2>Мои заявки</h2>
-        <div id="applicationsList"></div>
+
+        <!-- Блок с текущей информацией о пользователе -->
+        <div id="profileInfo" class="event-card" style="padding: 1rem; margin-bottom: 2rem;"></div>
+
+        <!-- Форма смены имени -->
+        <h2>Редактировать профиль</h2>
+        <form id="editProfileForm" class="event-card" style="padding: 1rem; margin-bottom: 2rem;">
+            <div class="form-group">
+                <label for="newName">Новое имя</label>
+                <input type="text" id="newName" required>
+            </div>
+            <button type="submit" class="btn">Обновить имя</button>
+        </form>
+
+        <!-- Мои заявки -->
+        <h2>Мои заявки на мероприятия</h2>
+        <div id="applicationsList" class="events-grid" style="grid-template-columns: 1fr;"></div>
+
+        <!-- Мои отзывы -->
         <h2>Мои отзывы</h2>
-        <div id="reviewsList"></div>
+        <div id="reviewsList" class="events-grid" style="grid-template-columns: 1fr;"></div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
     <script>
-        async function loadProfile() {
-            const token = getToken();
-            if (!token) {
-                window.location.href = 'login.html';
+        // Проверяем, авторизован ли пользователь
+        const user = getCurrentUser();
+        if (!user) {
+            // Не авторизован – отправляем на страницу входа
+            window.location.href = 'login.html';
+        }
+
+        // Отображаем информацию о пользователе
+        document.getElementById('profileInfo').innerHTML = `
+            <p><strong>Имя:</strong> ${escapeHtml(user.name)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
+            <p><strong>Роль:</strong> ${user.role === 'admin' ? 'Администратор' : 'Участник'}</p>
+        `;
+        document.getElementById('newName').value = user.name;
+
+        // Обработчик смены имени
+        document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newName = document.getElementById('newName').value.trim();
+            if (!newName) {
+                alert('Имя не может быть пустым');
                 return;
             }
-            const user = getUser();
-            document.getElementById('profileInfo').innerHTML = `
-                <div class="event-card">
-                    <div class="event-info">
-                        <p><strong>Имя:</strong> ${user.name}</p>
-                        <p><strong>Email:</strong> ${user.email}</p>
-                        <p><strong>Роль:</strong> ${user.role === 'admin' ? 'Администратор' : 'Участник'}</p>
-                    </div>
-                </div>
-            `;
-            // Заявки
-            const appsRes = await fetch('/api/user/applications', { headers: { 'Authorization': `Bearer ${token}` } });
-            const apps = await appsRes.json();
-            const appsDiv = document.getElementById('applicationsList');
-            if (apps.length === 0) appsDiv.innerHTML = '<p>Вы ещё не подавали заявок.</p>';
-            else {
-                appsDiv.innerHTML = apps.map(app => `
-                    <div class="event-card">
+            const success = updateUser(user.id, { name: newName });
+            if (success) {
+                // Обновляем текущего пользователя в памяти и localStorage
+                const updatedUser = getUserById(user.id);
+                setCurrentUser(updatedUser);
+                // Обновляем отображение
+                document.getElementById('profileInfo').innerHTML = `
+                    <p><strong>Имя:</strong> ${escapeHtml(updatedUser.name)}</p>
+                    <p><strong>Email:</strong> ${escapeHtml(updatedUser.email)}</p>
+                    <p><strong>Роль:</strong> ${updatedUser.role === 'admin' ? 'Администратор' : 'Участник'}</p>
+                `;
+                showNotification('Имя успешно изменено!', 'success');
+                // Обновляем навигацию (если в ссылке на профиль выводится имя)
+                updateNav();
+            } else {
+                alert('Ошибка при обновлении имени');
+            }
+        });
+
+        // Функция загрузки и отображения заявок пользователя
+        async function loadUserApplications() {
+            const container = document.getElementById('applicationsList');
+            const events = getEvents();
+            const applications = getUserApplications(user.id, user.email);
+
+            if (applications.length === 0) {
+                container.innerHTML = '<div class="event-card" style="padding: 1rem; text-align: center;">Вы ещё не подавали заявок на мероприятия.</div>';
+                return;
+            }
+
+            container.innerHTML = applications.map(app => {
+                const event = events.find(e => e.id === app.eventId);
+                const eventTitle = event ? event.title : 'Мероприятие удалено';
+                const statusText = app.status === 'pending' ? 'Ожидает подтверждения' :
+                                   (app.status === 'approved' ? 'Подтверждена' : 'Отклонена');
+                const statusClass = app.status === 'pending' ? 'status-pending' :
+                                    (app.status === 'approved' ? 'status-approved' : 'status-rejected');
+                return `
+                    <div class="event-card" style="margin-bottom: 1rem;">
                         <div class="event-info">
-                            <div><strong>${app.event_title || 'Мероприятие'}</strong></div>
-                            <div>Статус: ${app.status === 'pending' ? 'Ожидает' : app.status === 'approved' ? 'Подтверждена' : 'Отклонена'}</div>
-                            <div>Дата заявки: ${new Date(app.created_at).toLocaleDateString()}</div>
+                            <div class="event-title">${escapeHtml(eventTitle)}</div>
+                            <div>Дата мероприятия: ${event ? event.date : '—'}</div>
+                            <div>Время: ${event ? (event.start_time + ' – ' + event.end_time) : '—'}</div>
+                            <div>Статус заявки: <span class="${statusClass}">${statusText}</span></div>
+                            <div>Дата подачи: ${app.createdAt}</div>
                         </div>
                     </div>
-                `).join('');
-            }
-            // Отзывы
-            const revRes = await fetch('/api/user/reviews', { headers: { 'Authorization': `Bearer ${token}` } });
-            const reviews = await revRes.json();
-            const revDiv = document.getElementById('reviewsList');
-            if (reviews.length === 0) revDiv.innerHTML = '<p>Вы ещё не оставляли отзывов.</p>';
-            else {
-                revDiv.innerHTML = reviews.map(rev => `
-                    <div class="event-card">
-                        <div class="event-info">
-                            <div><strong>${rev.event_title}</strong></div>
-                            <div>${rev.text}</div>
-                            ${rev.photo_url ? `<img src="${rev.photo_url}" style="max-width:100%; max-height:150px;">` : ''}
-                            <div>${new Date(rev.created_at).toLocaleDateString()}</div>
-                            <button class="btn btn-outline" onclick="deleteReview(${rev.id})">Удалить</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
+                `;
+            }).join('');
         }
-        window.deleteReview = async (id) => {
-            if (!confirm('Удалить отзыв?')) return;
-            const token = getToken();
-            await fetch(`/api/reviews/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            loadProfile();
+
+        // Функция загрузки и отображения отзывов пользователя
+        async function loadUserReviews() {
+            const container = document.getElementById('reviewsList');
+            const events = getEvents();
+            const allReviews = getReviews();
+            const myReviews = allReviews.filter(r => r.userId === user.id);
+
+            if (myReviews.length === 0) {
+                container.innerHTML = '<div class="event-card" style="padding: 1rem; text-align: center;">Вы ещё не оставляли отзывов.</div>';
+                return;
+            }
+
+            container.innerHTML = myReviews.map(rev => {
+                const event = events.find(e => e.id === rev.eventId);
+                const eventTitle = event ? event.title : 'Мероприятие удалено';
+                return `
+                    <div class="review-item">
+                        <div class="event-title" style="font-weight: bold; margin-bottom: 0.5rem;">${escapeHtml(eventTitle)}</div>
+                        <div class="review-rating">${'★'.repeat(rev.rating)}${'☆'.repeat(5 - rev.rating)}</div>
+                        <div class="review-text">${escapeHtml(rev.text)}</div>
+                        ${rev.photo ? `<img class="review-photo" src="${rev.photo}" alt="Фото отзыва">` : ''}
+                        <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;">${rev.date}</div>
+                        <div style="margin-top: 0.8rem;">
+                            <button class="btn-outline" onclick="deleteMyReview(${rev.id})">Удалить отзыв</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Функция удаления своего отзыва
+        window.deleteMyReview = (reviewId) => {
+            if (!confirm('Удалить этот отзыв? Отменить действие будет невозможно.')) return;
+            const success = deleteReview(reviewId, user.id, user.role);
+            if (success) {
+                showNotification('Отзыв удалён', 'success');
+                loadUserReviews(); // обновляем список отзывов
+            } else {
+                alert('Не удалось удалить отзыв');
+            }
         };
-        loadProfile();
-        updateNav();
+
+        // Инициализация страницы
+        (function initProfile() {
+            loadUserApplications();
+            loadUserReviews();
+        })();
     </script>
 </body>
 </html>
