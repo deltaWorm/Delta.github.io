@@ -4,322 +4,293 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ панель | Молодежный центр</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <nav>
         <div class="logo">Молодежный центр</div>
         <div class="nav-links">
             <a href="index.html">Главная</a>
-            <a href="profile.html">Профиль</a>
-            <a href="admin.html" class="active">Админ панель</a>
-            <button id="logoutBtn">Выход</button>
+            <a href="login.html" id="loginLink">Вход</a>
+            <a href="register.html" id="registerLink">Регистрация</a>
+            <a href="profile.html" id="profileLink" style="display: none;">Профиль</a>
+            <a href="admin.html" id="adminLink" style="display: none;">Админ панель</a>
+            <button id="logoutBtn" style="display: none;">Выход</button>
         </div>
     </nav>
 
     <div class="container">
-        <h1>Управление мероприятиями</h1>
-        <button id="createEventBtn" class="btn">Создать мероприятие</button>
-        <div id="eventsList"></div>
+        <h1>Административная панель</h1>
+        <div class="admin-tabs">
+            <button class="admin-tab active" data-tab="events">Мероприятия</button>
+            <button class="admin-tab" data-tab="applications">Заявки</button>
+            <button class="admin-tab" data-tab="reviews">Отзывы</button>
+            <button class="admin-tab" data-tab="users">Пользователи</button>
+        </div>
 
-        <h2>Модерация отзывов</h2>
-        <div id="reviewsList"></div>
+        <div id="events-section" class="admin-section active">
+            <button id="createEventBtn" class="btn" style="margin-bottom: 1rem;">+ Создать мероприятие</button>
+            <div id="events-list-admin" class="events-grid"></div>
+        </div>
 
-        <h2>Заявки на мероприятия</h2>
-        <div id="applicationsList"></div>
+        <div id="applications-section" class="admin-section">
+            <div id="applications-list"></div>
+        </div>
+
+        <div id="reviews-section" class="admin-section">
+            <div id="reviews-list-admin"></div>
+        </div>
+
+        <div id="users-section" class="admin-section">
+            <div id="users-list"></div>
+        </div>
     </div>
 
     <!-- Модальное окно для создания/редактирования мероприятия -->
     <div id="eventModal" class="modal" style="display: none;">
-        <div class="modal-content modal-wide">
+        <div class="modal-content">
             <h3 id="modalTitle">Создать мероприятие</h3>
-            <div class="modal-two-columns">
-                <!-- Левая колонка: форма -->
-                <div class="modal-form">
-                    <form id="eventForm" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Название</label>
-                            <input type="text" name="title" id="eventTitle" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Описание</label>
-                            <textarea name="description" id="eventDescription" rows="4" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Дата (ГГГГ-ММ-ДД)</label>
-                            <input type="date" name="date" id="eventDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Время (ЧЧ:ММ)</label>
-                            <input type="time" name="time" id="eventTime" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Место</label>
-                            <input type="text" name="location" id="eventLocation" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Изображение (необязательно)</label>
-                            <input type="file" name="image" id="eventImage" accept="image/*">
-                        </div>
-                        <div class="modal-buttons">
-                            <button type="button" class="btn-outline" onclick="closeModal()">Отмена</button>
-                            <button type="submit" class="btn">Сохранить</button>
-                        </div>
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                <div style="flex: 1;">
+                    <form id="eventForm">
+                        <div class="form-group"><label>Название</label><input type="text" name="title" id="previewTitle" required></div>
+                        <div class="form-group"><label>Описание</label><textarea name="description" id="previewDesc" required></textarea></div>
+                        <div class="form-group"><label>Дата (ГГГГ-ММ-ДД)</label><input type="date" name="date" id="previewDate" required></div>
+                        <div class="form-group"><label>Время начала (ЧЧ:ММ)</label><input type="time" name="start_time" id="previewStartTime" required></div>
+                        <div class="form-group"><label>Время окончания (ЧЧ:ММ)</label><input type="time" name="end_time" id="previewEndTime" required></div>
+                        <div class="form-group"><label>Место</label><input type="text" name="location" id="previewLocation" required></div>
+                        <div class="form-group"><label>Изображение (необязательно)</label><input type="file" name="image" id="previewImage" accept="image/*"></div>
+                        <div class="modal-buttons"><button type="button" class="btn-outline" onclick="closeModal()">Отмена</button><button type="submit" class="btn">Сохранить</button></div>
                     </form>
                 </div>
-                <!-- Правая колонка: предпросмотр -->
-                <div class="modal-preview">
-                    <h4>Предпросмотр мероприятия</h4>
-                    <div id="livePreview" class="event-card preview-card">
-                        <div class="event-image" id="previewImage" style="background:#d9eef5;"></div>
-                        <div class="event-info">
-                            <div class="event-title" id="previewTitle">Название мероприятия</div>
-                            <div class="event-date" id="previewDate">📅 Дата</div>
-                            <div class="event-time" id="previewTime">🕒 Время</div>
-                            <div class="event-location" id="previewLocation">📍 Место</div>
-                            <div class="event-description" id="previewDescription">Описание</div>
-                            <button class="btn" disabled style="margin-top:0.5rem;">Подробнее</button>
-                        </div>
-                    </div>
+                <div style="flex: 1;">
+                    <div class="preview-container"><div class="preview-title">Предпросмотр карточки:</div><div id="livePreview" class="preview-card"></div></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
     <script>
         let editingEventId = null;
-        let currentImageFile = null;
 
         function closeModal() {
             document.getElementById('eventModal').style.display = 'none';
             editingEventId = null;
             document.getElementById('eventForm').reset();
-            currentImageFile = null;
-            // Сброс предпросмотра
             updatePreview();
         }
 
-        // Обновление предпросмотра в реальном времени
         function updatePreview() {
-            const title = document.getElementById('eventTitle').value || 'Название мероприятия';
-            const description = document.getElementById('eventDescription').value || 'Описание';
-            const date = document.getElementById('eventDate').value || 'ГГГГ-ММ-ДД';
-            const time = document.getElementById('eventTime').value || 'ЧЧ:ММ';
-            const location = document.getElementById('eventLocation').value || 'Место';
-            
-            document.getElementById('previewTitle').innerText = title;
-            document.getElementById('previewDescription').innerText = description;
-            document.getElementById('previewDate').innerHTML = `📅 ${date}`;
-            document.getElementById('previewTime').innerHTML = `🕒 ${time}`;
-            document.getElementById('previewLocation').innerHTML = `📍 ${location}`;
-            
-            // Если выбрано новое изображение, показываем его
-            if (currentImageFile) {
+            const title = document.getElementById('previewTitle').value || 'Название';
+            const date = document.getElementById('previewDate').value || 'ГГГГ-ММ-ДД';
+            const start = document.getElementById('previewStartTime').value || '--:--';
+            const end = document.getElementById('previewEndTime').value || '--:--';
+            const location = document.getElementById('previewLocation').value || 'Место';
+            const desc = document.getElementById('previewDesc').value || '';
+            const imgFile = document.getElementById('previewImage').files[0];
+            let imgHtml = '<div class="event-image" style="background:#d9eef5;"></div>';
+            if (imgFile) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById('previewImage');
-                    img.style.backgroundImage = `url(${e.target.result})`;
-                    img.style.backgroundSize = 'cover';
-                    img.style.backgroundPosition = 'center';
-                    img.innerHTML = ''; // убираем пустой div
+                reader.onload = e => {
+                    imgHtml = `<img class="event-image" src="${e.target.result}" style="height:150px; object-fit:cover;">`;
+                    document.getElementById('livePreview').innerHTML = `
+                        <div class="event-card">${imgHtml}<div class="event-info"><div class="event-title">${escapeHtml(title)}</div><div class="event-date">📅 ${date}</div><div class="event-time">🕒 ${start} – ${end}</div><div class="event-location">📍 ${location}</div><div style="font-size:0.8rem;">${escapeHtml(desc.substring(0,100))}...</div></div></div>
+                    `;
                 };
-                reader.readAsDataURL(currentImageFile);
-            } else {
-                // Если изображения нет, показываем плейсхолдер
-                const imgDiv = document.getElementById('previewImage');
-                imgDiv.style.backgroundImage = '';
-                imgDiv.style.backgroundColor = '#d9eef5';
-                imgDiv.innerHTML = '';
+                reader.readAsDataURL(imgFile);
+                return;
             }
+            document.getElementById('livePreview').innerHTML = `
+                <div class="event-card">${imgHtml}<div class="event-info"><div class="event-title">${escapeHtml(title)}</div><div class="event-date">📅 ${date}</div><div class="event-time">🕒 ${start} – ${end}</div><div class="event-location">📍 ${location}</div><div style="font-size:0.8rem;">${escapeHtml(desc.substring(0,100))}...</div></div></div>
+            `;
         }
 
-        // Отслеживаем изменения в полях формы для обновления предпросмотра
-        document.getElementById('eventTitle').addEventListener('input', updatePreview);
-        document.getElementById('eventDescription').addEventListener('input', updatePreview);
-        document.getElementById('eventDate').addEventListener('input', updatePreview);
-        document.getElementById('eventTime').addEventListener('input', updatePreview);
-        document.getElementById('eventLocation').addEventListener('input', updatePreview);
-        document.getElementById('eventImage').addEventListener('change', (e) => {
-            currentImageFile = e.target.files[0];
-            updatePreview();
-        });
+        document.getElementById('previewTitle').addEventListener('input', updatePreview);
+        document.getElementById('previewDesc').addEventListener('input', updatePreview);
+        document.getElementById('previewDate').addEventListener('input', updatePreview);
+        document.getElementById('previewStartTime').addEventListener('input', updatePreview);
+        document.getElementById('previewEndTime').addEventListener('input', updatePreview);
+        document.getElementById('previewLocation').addEventListener('input', updatePreview);
+        document.getElementById('previewImage').addEventListener('change', updatePreview);
 
-        async function loadAdminEvents() {
-            const res = await fetch('/api/events');
-            const events = await res.json();
-            const container = document.getElementById('eventsList');
-            container.innerHTML = events.map(event => `
+        function renderEvents() {
+            const events = getEvents();
+            const container = document.getElementById('events-list-admin');
+            if (!events.length) { container.innerHTML = '<p>Нет мероприятий. Создайте первое.</p>'; return; }
+            container.innerHTML = events.map(ev => `
                 <div class="event-card">
+                    ${ev.image ? `<img class="event-image" src="${ev.image}">` : '<div class="event-image" style="background:#d9eef5;"></div>'}
                     <div class="event-info">
-                        <div><strong>${event.title}</strong> (${event.date})</div>
-                        <button class="btn-outline" onclick="editEvent(${event.id})">Редактировать</button>
-                        <button class="btn-outline" onclick="deleteEvent(${event.id})">Удалить</button>
+                        <div class="event-title">${escapeHtml(ev.title)}</div>
+                        <div class="event-date">📅 ${ev.date}</div>
+                        <div class="event-time">🕒 ${ev.start_time} – ${ev.end_time}</div>
+                        <div class="event-location">📍 ${ev.location}</div>
+                        <div style="margin-top:0.5rem;">
+                            <button class="btn-outline" onclick="editEvent(${ev.id})">Редактировать</button>
+                            <button class="btn-outline" onclick="deleteEvent(${ev.id})">Удалить</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
         }
 
-        window.editEvent = async (id) => {
-            editingEventId = id;
+        function renderApplications() {
+            const apps = getApplications();
+            const events = getEvents();
+            const users = getUsers();
+            const container = document.getElementById('applications-list');
+            if (!apps.length) { container.innerHTML = '<p>Нет заявок.</p>'; return; }
+            container.innerHTML = apps.map(app => {
+                const ev = events.find(e => e.id === app.eventId);
+                const userName = app.userId ? (users.find(u => u.id === app.userId)?.name || '') : '';
+                return `
+                    <div class="application-item">
+                        <div><strong>${ev ? escapeHtml(ev.title) : 'Мероприятие удалено'}</strong></div>
+                        <div>Участник: ${escapeHtml(app.guestName || userName)} (${escapeHtml(app.guestEmail || '')})</div>
+                        <div>Дата: ${app.createdAt}</div>
+                        <div>Статус: ${app.status === 'pending' ? 'Ожидает' : (app.status === 'approved' ? 'Подтверждена' : 'Отклонена')}</div>
+                        <div><button class="btn-outline" onclick="updateAppStatus(${app.id}, 'approved')">Подтвердить</button> <button class="btn-outline" onclick="updateAppStatus(${app.id}, 'rejected')">Отклонить</button></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderReviews() {
+            const reviews = getReviews();
+            const events = getEvents();
+            const users = getUsers();
+            const container = document.getElementById('reviews-list-admin');
+            if (!reviews.length) { container.innerHTML = '<p>Нет отзывов.</p>'; return; }
+            container.innerHTML = reviews.map(rev => {
+                const ev = events.find(e => e.id === rev.eventId);
+                const author = users.find(u => u.id === rev.userId);
+                return `
+                    <div class="review-item">
+                        <div><strong>${escapeHtml(author ? author.name : 'Гость')}</strong> на "${ev ? escapeHtml(ev.title) : '?'}"</div>
+                        <div class="review-rating">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</div>
+                        <div>${escapeHtml(rev.text)}</div>
+                        ${rev.photo ? `<img class="review-photo" src="${rev.photo}">` : ''}
+                        <div style="margin-top:0.5rem;"><button class="btn-outline" onclick="deleteReviewAdmin(${rev.id})">Удалить отзыв</button></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderUsers() {
+            const users = getUsers();
+            const current = getCurrentUser();
+            const container = document.getElementById('users-list');
+            if (!users.length) { container.innerHTML = '<p>Нет пользователей.</p>'; return; }
+            container.innerHTML = users.map(user => `
+                <div class="application-item">
+                    <div><strong>${escapeHtml(user.name)}</strong> (${escapeHtml(user.email)})</div>
+                    <div>Роль: ${user.role === 'admin' ? 'Администратор' : 'Пользователь'}</div>
+                    ${current && current.role === 'admin' && user.id !== current.id ? `<div style="margin-top:0.5rem;"><button class="btn-outline" onclick="makeAdmin(${user.id})">Сделать администратором</button></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        window.makeAdmin = (userId) => {
+            if (confirm('Назначить этого пользователя администратором?')) {
+                updateUser(userId, { role: 'admin' });
+                showNotification('Пользователь теперь администратор', 'success');
+                renderUsers();
+            }
+        };
+        window.updateAppStatus = (appId, status) => {
+            updateApplicationStatus(appId, status);
+            showNotification('Статус обновлён', 'success');
+            renderApplications();
+        };
+        window.deleteReviewAdmin = (reviewId) => {
+            const user = getCurrentUser();
+            if (deleteReview(reviewId, user.id, user.role)) {
+                showNotification('Отзыв удалён', 'success');
+                renderReviews();
+            } else alert('Ошибка');
+        };
+        window.deleteEvent = (eventId) => {
+            if (confirm('Удалить мероприятие?')) {
+                deleteEvent(eventId);
+                showNotification('Мероприятие удалено', 'success');
+                renderEvents();
+                renderApplications();
+                renderReviews();
+            }
+        };
+        window.editEvent = (eventId) => {
+            const ev = getEventById(eventId);
+            if (!ev) return;
+            editingEventId = eventId;
+            document.getElementById('previewTitle').value = ev.title;
+            document.getElementById('previewDesc').value = ev.description;
+            document.getElementById('previewDate').value = ev.date;
+            document.getElementById('previewStartTime').value = ev.start_time;
+            document.getElementById('previewEndTime').value = ev.end_time;
+            document.getElementById('previewLocation').value = ev.location;
             document.getElementById('modalTitle').innerText = 'Редактировать мероприятие';
-            // Загружаем данные мероприятия
-            const res = await fetch(`/api/events/${id}`);
-            const data = await res.json();
-            const ev = data.event;
-            document.getElementById('eventTitle').value = ev.title;
-            document.getElementById('eventDescription').value = ev.description;
-            document.getElementById('eventDate').value = ev.date;
-            document.getElementById('eventTime').value = ev.time;
-            document.getElementById('eventLocation').value = ev.location;
-            // Если есть изображение, показываем его в предпросмотре (но не загружаем файл)
-            if (ev.image_url) {
-                const imgDiv = document.getElementById('previewImage');
-                imgDiv.style.backgroundImage = `url(${ev.image_url})`;
-                imgDiv.style.backgroundSize = 'cover';
-                imgDiv.style.backgroundPosition = 'center';
-                imgDiv.innerHTML = '';
-                currentImageFile = null; // не меняем файл, оставляем старый
-            } else {
-                currentImageFile = null;
-                updatePreview();
-            }
             document.getElementById('eventModal').style.display = 'block';
-            updatePreview(); // обновить превью
+            updatePreview();
         };
-
-        window.deleteEvent = async (id) => {
-            if (!confirm('Удалить мероприятие?')) return;
-            const token = getToken();
-            await fetch(`/api/events/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            loadAdminEvents();
-        };
-
-        document.getElementById('eventForm').addEventListener('submit', async (e) => {
+        document.getElementById('eventForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const token = getToken();
-            let url = '/api/events';
-            let method = 'POST';
-            if (editingEventId) {
-                url = `/api/events/${editingEventId}`;
-                method = 'PUT';
-            }
-            const res = await fetch(url, {
-                method,
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            if (res.ok) {
-                closeModal();
-                loadAdminEvents();
-            } else {
-                alert('Ошибка сохранения');
-            }
-        });
-
-        // Загрузка всех отзывов для модерации
-        async function loadAllReviews() {
-            const res = await fetch('/api/events');
-            const events = await res.json();
-            let allReviews = [];
-            for (let ev of events) {
-                const revRes = await fetch(`/api/events/${ev.id}`);
-                const data = await revRes.json();
-                data.reviews.forEach(r => {
-                    r.event_title = ev.title;
-                    allReviews.push(r);
-                });
-            }
-            const container = document.getElementById('reviewsList');
-            if (allReviews.length === 0) {
-                container.innerHTML = '<p>Нет отзывов.</p>';
-                return;
-            }
-            container.innerHTML = allReviews.map(r => `
-                <div class="event-card">
-                    <div class="event-info">
-                        <div><strong>${r.event_title}</strong> - ${r.user_name || 'Гость'}</div>
-                        <p>${r.text}</p>
-                        ${r.photo_url ? `<img src="${r.photo_url}" style="max-width:100px;">` : ''}
-                        <button class="btn-outline" onclick="deleteReview(${r.id})">Удалить</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Загрузка заявок на все мероприятия
-        async function loadAllApplications() {
-            const res = await fetch('/api/events');
-            const events = await res.json();
-            let allApps = [];
-            for (let ev of events) {
-                const appsRes = await fetch(`/api/events/${ev.id}/applications`, { headers: { 'Authorization': `Bearer ${getToken()}` } });
-                if (appsRes.ok) {
-                    const apps = await appsRes.json();
-                    apps.forEach(a => {
-                        a.event_title = ev.title;
-                        allApps.push(a);
-                    });
+            const title = document.getElementById('previewTitle').value;
+            const description = document.getElementById('previewDesc').value;
+            const date = document.getElementById('previewDate').value;
+            const start_time = document.getElementById('previewStartTime').value;
+            const end_time = document.getElementById('previewEndTime').value;
+            const location = document.getElementById('previewLocation').value;
+            const imageFile = document.getElementById('previewImage').files[0];
+            const saveEvent = (imageBase64) => {
+                if (editingEventId) {
+                    updateEvent(editingEventId, { title, description, date, start_time, end_time, location, image: imageBase64 });
+                    showNotification('Мероприятие обновлено', 'success');
+                } else {
+                    addEvent({ title, description, date, start_time, end_time, location, image: imageBase64, createdBy: getCurrentUser()?.id });
+                    showNotification('Мероприятие создано', 'success');
                 }
-            }
-            const container = document.getElementById('applicationsList');
-            if (allApps.length === 0) {
-                container.innerHTML = '<p>Нет заявок.</p>';
-                return;
-            }
-            container.innerHTML = allApps.map(a => `
-                <div class="event-card">
-                    <div class="event-info">
-                        <div><strong>${a.event_title}</strong></div>
-                        <div>Имя: ${a.guest_name || a.user_name}</div>
-                        <div>Email: ${a.guest_email || a.user_email}</div>
-                        <div>Статус: ${a.status === 'pending' ? 'Ожидает' : a.status === 'approved' ? 'Подтверждена' : 'Отклонена'}</div>
-                        ${a.status === 'pending' ? `
-                            <button class="btn-outline" onclick="changeStatus(${a.id}, 'approved')">Подтвердить</button>
-                            <button class="btn-outline" onclick="changeStatus(${a.id}, 'rejected')">Отклонить</button>
-                        ` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        window.changeStatus = async (appId, status) => {
-            const token = getToken();
-            await fetch(`/api/applications/${appId}`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-            loadAllApplications();
-        };
-
-        window.deleteReview = async (id) => {
-            if (!confirm('Удалить отзыв?')) return;
-            const token = getToken();
-            await fetch(`/api/reviews/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            loadAllReviews();
-        };
-
+                closeModal();
+                renderEvents();
+            };
+            if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = (ev) => saveEvent(ev.target.result);
+                reader.readAsDataURL(imageFile);
+            } else saveEvent(null);
+        });
         document.getElementById('createEventBtn').addEventListener('click', () => {
             editingEventId = null;
-            document.getElementById('modalTitle').innerText = 'Создать мероприятие';
             document.getElementById('eventForm').reset();
-            currentImageFile = null;
-            updatePreview();
+            document.getElementById('modalTitle').innerText = 'Создать мероприятие';
             document.getElementById('eventModal').style.display = 'block';
+            updatePreview();
         });
 
-        // Проверка роли
-        const user = getUser();
+        document.querySelectorAll('.admin-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const tabId = tab.dataset.tab;
+                document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
+                if (tabId === 'events') { document.getElementById('events-section').classList.add('active'); renderEvents(); }
+                else if (tabId === 'applications') { document.getElementById('applications-section').classList.add('active'); renderApplications(); }
+                else if (tabId === 'reviews') { document.getElementById('reviews-section').classList.add('active'); renderReviews(); }
+                else if (tabId === 'users') { document.getElementById('users-section').classList.add('active'); renderUsers(); }
+            });
+        });
+
+        const user = getCurrentUser();
         if (!user || user.role !== 'admin') {
+            alert('Доступ только для администратора.');
             window.location.href = 'index.html';
         } else {
-            loadAdminEvents();
-            loadAllReviews();
-            loadAllApplications();
+            renderEvents();
+            renderApplications();
+            renderReviews();
+            renderUsers();
         }
-        updateNav();
     </script>
 </body>
 </html>
