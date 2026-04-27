@@ -37,24 +37,18 @@
     </div>
     <script src="js/script.js"></script>
     <script>
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('name').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            if (users.find(u => u.email === email)) {
-                alert('Пользователь с таким email уже существует');
-                return;
-            }
-            const newId = users.length ? Math.max(...users.map(u=>u.id)) + 1 : 1;
-            const newUser = { id: newId, name, email, password, role: 'user' };
-            users.push(newUser);
-            localStorage.setItem('users', JSON.stringify(users));
-            setCurrentUser({ id: newUser.id, name, email, role: 'user' });
-            showNotification('Регистрация успешна!', 'success');
-            window.location.href = 'index.html';
-        });
+       document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const users = await getUsers();
+    if (users.find(u => u.email === email)) { alert('Email уже используется'); return; }
+    const newUser = await addUser({ name, email, password, role: 'user' });
+    await setCurrentUser({ id: newUser.id, name: newUser.name, email: newUser.email, role: 'user' });
+    showNotification('Регистрация успешна!', 'success');
+    window.location.href = 'index.html';
+});
     </script>
 </body>
 </html>
