@@ -8,59 +8,45 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Навигация (копия с главной) -->
     <nav>
         <div class="logo">Молодежный центр</div>
         <div class="nav-links">
             <a href="index.html">Главная</a>
             <a href="login.html" class="active">Вход</a>
             <a href="register.html">Регистрация</a>
-            <a href="profile.html" id="profileLink" style="display: none;">Профиль</a>
-            <a href="admin.html" id="adminLink" style="display: none;">Админ панель</a>
-            <button id="logoutBtn" style="display: none;">Выход</button>
         </div>
     </nav>
-
-    <div class="container" style="max-width: 500px; margin-top: 2rem;">
-        <h2>Вход в личный кабинет</h2>
+    <div class="container" style="max-width: 500px;">
+        <h2>Вход</h2>
         <form id="loginForm">
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required placeholder="example@mail.ru">
+                <label>Email</label>
+                <input type="email" id="email" required>
             </div>
             <div class="form-group">
-                <label for="password">Пароль</label>
-                <input type="password" id="password" name="password" required placeholder="••••••">
+                <label>Пароль</label>
+                <input type="password" id="password" required>
             </div>
             <button type="submit" class="btn">Войти</button>
         </form>
-        <p style="margin-top: 1rem; text-align: center;">
-            Нет аккаунта? <a href="register.html">Зарегистрироваться</a>
-        </p>
+        <p style="margin-top: 1rem;">Нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
     </div>
-
     <script src="js/script.js"></script>
     <script>
-        // Обработчик формы входа
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-
-            const users = getUsers(); // функция из script.js
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
             const user = users.find(u => u.email === email && u.password === password);
-
             if (user) {
                 setCurrentUser({ id: user.id, name: user.name, email: user.email, role: user.role });
                 showNotification('Вход выполнен успешно!', 'success');
                 window.location.href = 'index.html';
             } else {
-                showNotification('Неверный email или пароль', 'error');
+                alert('Неверный email или пароль');
             }
         });
-
-        // Обновляем навигацию (чтобы скрыть ссылки входа/регистрации после входа – на всякий случай)
-        updateNav();
     </script>
 </body>
 </html>
