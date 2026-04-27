@@ -19,7 +19,6 @@
             <button id="logoutBtn" style="display: none;">Выход</button>
         </div>
     </nav>
-
     <div class="container">
         <h1>Мероприятия</h1>
         <div class="filters">
@@ -27,17 +26,12 @@
             <button data-filter="upcoming">Предстоящие</button>
             <button data-filter="past">Прошедшие</button>
         </div>
-        <div id="events-list" class="events-grid">
-            <div class="loading">Загрузка...</div>
-        </div>
+        <div id="events-list" class="events-grid"></div>
     </div>
-
     <script src="js/script.js"></script>
     <script>
         let currentFilter = 'all';
-        function render() {
-            loadEventsList('events-list', currentFilter);
-        }
+        function render() { loadEventsList('events-list', currentFilter); }
         document.querySelectorAll('.filters button').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
