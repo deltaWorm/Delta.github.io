@@ -8,47 +8,31 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <nav>
-        <div class="logo">Молодежный центр</div>
-        <div class="nav-links">
-            <a href="index.html">Главная</a>
-            <a href="login.html">Вход</a>
-            <a href="register.html" class="active">Регистрация</a>
-        </div>
-    </nav>
+    <nav><div class="logo">Молодежный центр</div><div class="nav-links"><a href="index.html">Главная</a><a href="login.html">Вход</a><a href="register.html" class="active">Регистрация</a></div></nav>
     <div class="container" style="max-width: 500px;">
         <h2>Регистрация</h2>
         <form id="registerForm">
-            <div class="form-group">
-                <label>Имя</label>
-                <input type="text" id="name" required>
-            </div>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="email" required>
-            </div>
-            <div class="form-group">
-                <label>Пароль</label>
-                <input type="password" id="password" required>
-            </div>
+            <div class="form-group"><label>Имя</label><input type="text" id="name" required></div>
+            <div class="form-group"><label>Email</label><input type="email" id="email" required></div>
+            <div class="form-group"><label>Пароль</label><input type="password" id="password" required></div>
             <button type="submit" class="btn">Зарегистрироваться</button>
         </form>
-        <p style="margin-top: 1rem;">Уже есть аккаунт? <a href="login.html">Войти</a></p>
+        <p>Уже есть аккаунт? <a href="login.html">Войти</a></p>
     </div>
     <script src="js/script.js"></script>
     <script>
-       document.getElementById('registerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('name').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const users = await getUsers();
-    if (users.find(u => u.email === email)) { alert('Email уже используется'); return; }
-    const newUser = await addUser({ name, email, password, role: 'user' });
-    await setCurrentUser({ id: newUser.id, name: newUser.name, email: newUser.email, role: 'user' });
-    showNotification('Регистрация успешна!', 'success');
-    window.location.href = 'index.html';
-});
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const users = getUsers();
+            if (users.find(u => u.email === email)) { alert('Email уже используется'); return; }
+            const newUser = addUser({ name, email, password, role: 'user' });
+            setCurrentUser({ id: newUser.id, name: newUser.name, email: newUser.email, role: 'user' });
+            showNotification('Регистрация успешна', 'success');
+            window.location.href = 'index.html';
+        });
     </script>
 </body>
 </html>
