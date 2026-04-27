@@ -4,161 +4,89 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Профиль | Молодежный центр</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <nav>
         <div class="logo">Молодежный центр</div>
         <div class="nav-links">
             <a href="index.html">Главная</a>
-            <a href="login.html" id="loginLink">Вход</a>
-            <a href="register.html" id="registerLink">Регистрация</a>
-            <a href="profile.html" id="profileLink" style="display: none;">Профиль</a>
+            <a href="profile.html" class="active">Профиль</a>
             <a href="admin.html" id="adminLink" style="display: none;">Админ панель</a>
-            <button id="logoutBtn" style="display: none;">Выход</button>
+            <button id="logoutBtn">Выход</button>
         </div>
     </nav>
 
     <div class="container">
         <h1>Мой профиль</h1>
-        
-        <!-- Информация о пользователе -->
-        <div id="profileInfo" class="event-card" style="padding:1rem; margin-bottom:1.5rem;"></div>
-
-        <!-- Форма смены имени -->
-        <h2>Редактировать профиль</h2>
-        <form id="editProfileForm" class="event-card" style="padding:1rem;">
-            <div class="form-group">
-                <label>Новое имя</label>
-                <input type="text" id="newName" required>
-            </div>
-            <button type="submit" class="btn">Обновить имя</button>
-        </form>
-
-        <!-- Мои заявки -->
+        <div id="profileInfo"></div>
         <h2>Мои заявки</h2>
-        <div id="applicationsList" class="events-grid" style="grid-template-columns: 1fr;"></div>
-
-        <!-- Мои отзывы -->
+        <div id="applicationsList"></div>
         <h2>Мои отзывы</h2>
-        <div id="reviewsList" class="events-grid" style="grid-template-columns: 1fr;"></div>
+        <div id="reviewsList"></div>
     </div>
 
-    <script src="js/script.js"></script>
+    <script src="script.js"></script>
     <script>
-        // Проверка авторизации
-        const user = getCurrentUser();
-        if (!user) {
-            // Не авторизован – перенаправляем на страницу входа
-            window.location.href = 'login.html';
-        }
-
-        // Отображение информации о пользователе
-        document.getElementById('profileInfo').innerHTML = `
-            <p><strong>Имя:</strong> ${escapeHtml(user.name)}</p>
-            <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
-            <p><strong>Роль:</strong> ${user.role === 'admin' ? 'Администратор' : 'Участник'}</p>
-        `;
-        document.getElementById('newName').value = user.name;
-
-        // Обработчик смены имени
-        document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newName = document.getElementById('newName').value.trim();
-            if (!newName) return;
-            const success = await updateUser(user.id, { name: newName });
-            if (success) {
-                // Обновляем текущего пользователя в сессии
-                const updatedUser = await getUserById(user.id);
-                await setCurrentUser(updatedUser);
-                showNotification('Имя обновлено!', 'success');
-                // Обновляем отображение
-                document.getElementById('profileInfo').innerHTML = `
-                    <p><strong>Имя:</strong> ${escapeHtml(updatedUser.name)}</p>
-                    <p><strong>Email:</strong> ${escapeHtml(updatedUser.email)}</p>
-                    <p><strong>Роль:</strong> ${updatedUser.role === 'admin' ? 'Администратор' : 'Участник'}</p>
-                `;
-                // Обновляем навигацию (в ней может отображаться имя в ссылке "Профиль")
-                await updateNav();
-            } else {
-                alert('Ошибка обновления имени');
-            }
-        });
-
-        // Загрузка и отображение заявок пользователя
-        async function loadUserApplications() {
-            const appsContainer = document.getElementById('applicationsList');
-            const events = await getEvents();
-            const applications = await getUserApplications(user.id, user.email);
-            if (applications.length === 0) {
-                appsContainer.innerHTML = '<div class="event-card" style="padding:1rem; text-align:center;">Вы ещё не подавали заявок.</div>';
+        async function loadProfile() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = 'login.html';
                 return;
             }
-            appsContainer.innerHTML = applications.map(app => {
-                const event = events.find(e => e.id === app.eventId);
-                const eventTitle = event ? event.title : 'Мероприятие удалено';
-                const statusText = app.status === 'pending' ? 'Ожидает' : (app.status === 'approved' ? 'Подтверждена' : 'Отклонена');
-                return `
-                    <div class="event-card" style="margin-bottom:1rem;">
+            const user = getUser();
+            document.getElementById('profileInfo').innerHTML = `
+                <div class="event-card">
+                    <div class="event-info">
+                        <p><strong>Имя:</strong> ${user.name}</p>
+                        <p><strong>Email:</strong> ${user.email}</p>
+                        <p><strong>Роль:</strong> ${user.role === 'admin' ? 'Администратор' : 'Участник'}</p>
+                    </div>
+                </div>
+            `;
+            // Заявки
+            const appsRes = await fetch('/api/user/applications', { headers: { 'Authorization': `Bearer ${token}` } });
+            const apps = await appsRes.json();
+            const appsDiv = document.getElementById('applicationsList');
+            if (apps.length === 0) appsDiv.innerHTML = '<p>Вы ещё не подавали заявок.</p>';
+            else {
+                appsDiv.innerHTML = apps.map(app => `
+                    <div class="event-card">
                         <div class="event-info">
-                            <div class="event-title">${escapeHtml(eventTitle)}</div>
-                            <div>Статус: ${statusText}</div>
-                            <div>Дата заявки: ${app.createdAt}</div>
+                            <div><strong>${app.event_title || 'Мероприятие'}</strong></div>
+                            <div>Статус: ${app.status === 'pending' ? 'Ожидает' : app.status === 'approved' ? 'Подтверждена' : 'Отклонена'}</div>
+                            <div>Дата заявки: ${new Date(app.created_at).toLocaleDateString()}</div>
                         </div>
                     </div>
-                `;
-            }).join('');
-        }
-
-        // Загрузка и отображение отзывов пользователя
-        async function loadUserReviews() {
-            const revContainer = document.getElementById('reviewsList');
-            const events = await getEvents();
-            const allReviews = await getReviews();
-            const myReviews = allReviews.filter(r => r.userId === user.id);
-            if (myReviews.length === 0) {
-                revContainer.innerHTML = '<div class="event-card" style="padding:1rem; text-align:center;">Вы ещё не оставляли отзывов.</div>';
-                return;
+                `).join('');
             }
-            revContainer.innerHTML = myReviews.map(rev => {
-                const event = events.find(e => e.id === rev.eventId);
-                const eventTitle = event ? event.title : 'Мероприятие удалено';
-                return `
-                    <div class="review-item">
-                        <div class="event-title">${escapeHtml(eventTitle)}</div>
-                        <div class="review-rating">${'★'.repeat(rev.rating)}${'☆'.repeat(5-rev.rating)}</div>
-                        <div>${escapeHtml(rev.text)}</div>
-                        ${rev.photo ? `<img class="review-photo" src="${rev.photo}" alt="Фото">` : ''}
-                        <div style="font-size:0.8rem; margin-top:0.5rem;">${rev.date}</div>
-                        <div style="margin-top:0.5rem;">
-                            <button class="btn-outline" onclick="deleteMyReview(${rev.id})">Удалить отзыв</button>
+            // Отзывы
+            const revRes = await fetch('/api/user/reviews', { headers: { 'Authorization': `Bearer ${token}` } });
+            const reviews = await revRes.json();
+            const revDiv = document.getElementById('reviewsList');
+            if (reviews.length === 0) revDiv.innerHTML = '<p>Вы ещё не оставляли отзывов.</p>';
+            else {
+                revDiv.innerHTML = reviews.map(rev => `
+                    <div class="event-card">
+                        <div class="event-info">
+                            <div><strong>${rev.event_title}</strong></div>
+                            <div>${rev.text}</div>
+                            ${rev.photo_url ? `<img src="${rev.photo_url}" style="max-width:100%; max-height:150px;">` : ''}
+                            <div>${new Date(rev.created_at).toLocaleDateString()}</div>
+                            <button class="btn btn-outline" onclick="deleteReview(${rev.id})">Удалить</button>
                         </div>
                     </div>
-                `;
-            }).join('');
-        }
-
-        // Функция удаления своего отзыва (вызывается из кнопки)
-        window.deleteMyReview = async (reviewId) => {
-            if (!confirm('Удалить этот отзыв?')) return;
-            const success = await deleteReview(reviewId, user.id, user.role);
-            if (success) {
-                showNotification('Отзыв удалён', 'success');
-                await loadUserReviews();  // перезагружаем список отзывов
-            } else {
-                alert('Не удалось удалить отзыв');
+                `).join('');
             }
+        }
+        window.deleteReview = async (id) => {
+            if (!confirm('Удалить отзыв?')) return;
+            const token = getToken();
+            await fetch(`/api/reviews/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            loadProfile();
         };
-
-        // Инициализация страницы
-        (async () => {
-            // Ждём, пока данные в script.js загрузятся (глобально appData уже инициализирован)
-            // Но на всякий случай принудительно обновим кэш
-            await refreshData();
-            await loadUserApplications();
-            await loadUserReviews();
-        })();
+        loadProfile();
+        updateNav();
     </script>
 </body>
 </html>
